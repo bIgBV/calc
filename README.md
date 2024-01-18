@@ -8,6 +8,7 @@ Some of the references I based this on:
 
 * An amazing article on the idea of "binding power" as a function of operator precedence by @matklad: [Simple but Powerful Pratt Parsing](https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html)
 * A great functional article on the core implementation of pratt parsing by Bob Nystrom: [Pratt Parsers: Expression Parsing Made Easy](https://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/)
+* This entire chapter of parsing from the [Crafting Interpreters](http://craftinginterpreters.com/compiling-expressions.html) book.
 
 ## Getting Started
 
