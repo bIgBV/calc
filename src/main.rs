@@ -220,9 +220,9 @@ struct Parser {
 }
 
 impl Parser {
-    fn new(input: String) -> Self {
+    fn new(input: impl Into<String>) -> Self {
         Parser {
-            lexer: Lexer::new(input),
+            lexer: Lexer::new(input.into()),
         }
     }
 
@@ -378,5 +378,37 @@ impl Lexer {
                 kind: TokenType::Eof,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn arithmetic_expressions() {
+        // Unary
+        let mut parser = Parser::new("- 1");
+        let expr = expression(&mut parser, State::new());
+
+        assert_eq!(format!("{}", expr), "(- 1)");
+
+        // Binary
+        let mut parser = Parser::new("1 + 2");
+        let expr = expression(&mut parser, State::new());
+
+        assert_eq!(format!("{}", expr), "(1 + 2)");
+
+        // Grouping
+        let mut parser = Parser::new("1 + 2 + (3 + 4)");
+        let expr = expression(&mut parser, State::new());
+
+        assert_eq!(format!("{}", expr), "(((1 + 2) + (3) + 4))");
+
+        // Factors
+        let mut parser = Parser::new("1 + 2 / 4 * 5");
+        let expr = expression(&mut parser, State::new());
+
+        assert_eq!(format!("{}", expr), "(1 + ((2 / 4) * 5))");
     }
 }
