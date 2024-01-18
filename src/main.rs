@@ -56,6 +56,7 @@ struct ParseRule {
 }
 
 impl ParseRule {
+    // Simple helper to make calling the parsing functions easier
     fn call_prefix(&self, parser: &mut Parser, state: State) -> Expr {
         self.prefix.expect(&format!(
             "No prefix rule mapped for operator: {:?}",
@@ -71,6 +72,9 @@ impl ParseRule {
     }
 }
 
+/// The core parser mapping
+///
+/// This function sets up the mapping of [`TokenType`] -> [`ParseRule`]
 fn parse_rule(operator: &TokenType) -> &'static ParseRule {
     PARSE_RULES
         .get_or_init(|| {
@@ -166,11 +170,17 @@ impl cmp::PartialOrd for Precedence {
     }
 }
 
+/// Parses any expression defined in the language
 fn expression(parser: &mut Parser, _state: State) -> Expr {
     // We simply parse the lowest precedence level, which subsumes all of the higher-precedence expressions too
     parser.parse_expression(Precedence::None)
 }
 
+/// Parses a grouping
+///
+/// ```
+/// grouping := ( expr )
+/// ```
 fn grouping(parser: &mut Parser, state: State) -> Expr {
     let expr = expression(parser, state);
     // Make sure to get the right paren
@@ -178,6 +188,11 @@ fn grouping(parser: &mut Parser, state: State) -> Expr {
     expr
 }
 
+/// Parses a binary expression
+///
+/// ```
+/// binaryExpr := expr <op> expr
+/// ```
 fn binary(parser: &mut Parser, state: State) -> Expr {
     // FIgure out the parse rule associated with the operator
     let operator_rule = parse_rule(&state.previous.kind);
@@ -194,6 +209,11 @@ fn binary(parser: &mut Parser, state: State) -> Expr {
     }))
 }
 
+/// Parses a unary expression
+///
+/// ```
+/// unary := <op> expr
+/// ```
 fn unary(parser: &mut Parser, state: State) -> Expr {
     // Parse the operand
     let right = parser.parse_expression(Precedence::Unary);
@@ -204,6 +224,11 @@ fn unary(parser: &mut Parser, state: State) -> Expr {
     }))
 }
 
+/// Parses an identifier in the language
+///
+/// ```
+/// ident := <alphnumeric word>
+/// ```
 fn ident(_parser: &mut Parser, state: State) -> Expr {
     match state.previous.kind {
         TokenType::Ident => Expr::Atom(state.previous.lexeme),
@@ -226,6 +251,16 @@ impl Parser {
         }
     }
 
+    /// The core of the pratt parser.
+    ///
+    /// This works on the idea that we always parse the prefix expression
+    /// associated with a token, and then proceed to parse the rest of the
+    /// expression _only_ if the precedence associated with the next token is
+    /// greater than that of the current token.
+    ///
+    /// This ensures that the operator associativity is properly set up
+    /// according the rules of our language -- which themselves are set up in
+    /// the [`PARSE_RULES`] table
     pub fn parse_expression(&mut self, precedence: Precedence) -> Expr {
         let token = self.consume();
 
@@ -234,11 +269,13 @@ impl Parser {
 
         // While the precedence of the next token is lower than the current token's precedence,
         // keep parsing the infix expression
-        while precedence < parse_rule(&self.lookahead(0).kind).precedence {
+        while precedence < parse_rule(&self.lookahead().kind).precedence {
             // Make sure to consume the next token
             let token = self.consume();
             let infix_rule = parse_rule(&token.kind);
             let mut state = State::with_token(token);
+
+            // Update the state with the left expression for parsing the infix expression.
             state.left = Some(left);
             left = infix_rule.call_infix(self, state);
         }
@@ -246,12 +283,14 @@ impl Parser {
         left
     }
 
+    /// Consume the next token
     fn consume(&mut self) -> Token {
         self.lexer.pop()
     }
 
+    /// Consume the token of the given [`TokenType`]
     fn consume_token(&mut self, kind: TokenType) -> Token {
-        let next = self.lookahead(0);
+        let next = self.lookahead();
         if next.kind != kind {
             panic!(
                 "Next token {:?} not matching the expected kind: {:?}",
@@ -262,12 +301,14 @@ impl Parser {
         self.consume()
     }
 
-    fn lookahead(&mut self, _distance: usize) -> Token {
+    /// Peek at the next token
+    fn lookahead(&mut self) -> Token {
         self.lexer.peek()
     }
 }
 
 #[derive(Debug)]
+/// Represents an Expression in our little language
 enum Expr {
     Atom(String),
     Pre(Box<PrefixExpr>),
