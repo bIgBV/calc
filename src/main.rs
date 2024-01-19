@@ -58,17 +58,17 @@ struct ParseRule {
 impl ParseRule {
     // Simple helper to make calling the parsing functions easier
     fn call_prefix(&self, parser: &mut Parser, state: State) -> Expr {
-        self.prefix.expect(&format!(
-            "No prefix rule mapped for operator: {:?}",
-            state.previous
-        ))(parser, state)
+        self.prefix
+            .unwrap_or_else(|| panic!("No prefix rule mapped for operator: {:?}", state.previous))(
+            parser, state,
+        )
     }
 
     fn call_infix(&self, parser: &mut Parser, state: State) -> Expr {
-        self.infix.expect(&format!(
-            "No infix rule mapped for operator: {:?}",
-            state.previous
-        ))(parser, state)
+        self.infix
+            .unwrap_or_else(|| panic!("No prefix rule mapped for operator: {:?}", state.previous))(
+            parser, state,
+        )
     }
 }
 
@@ -145,11 +145,8 @@ fn parse_rule(operator: &TokenType) -> &'static ParseRule {
             );
             map
         })
-        .get(&operator)
-        .expect(&format!(
-            "No parser rule mapping found for operator: {:?}",
-            operator
-        ))
+        .get(operator)
+        .unwrap_or_else(|| panic!("No parser rule mapping found for operator: {:?}", operator))
 }
 
 /// For example, say the compiler is sitting on a chunk of code like:
